@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feliz Cumpleaños Miryan 🌕</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #020814;
+      min-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      cursor: none;
+    }
+
+    #canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .scene {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      user-select: none;
+    }
+
+    .greeting {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 300;
+      font-size: clamp(1.1rem, 3vw, 1.6rem);
+      color: #c8d8ff;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeUp 1.2s ease 0.5s forwards;
+      margin-bottom: 0.4rem;
+    }
+
+    .name {
+      font-family: 'Cinzel Decorative', serif;
+      font-weight: 900;
+      font-size: clamp(3rem, 10vw, 7rem);
+      color: #fff;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      opacity: 0;
+      animation: fadeUp 1.4s ease 0.9s forwards;
+      text-shadow:
+        0 0 30px rgba(255,255,220,0.9),
+        0 0 80px rgba(200,210,255,0.5),
+        0 0 150px rgba(180,190,255,0.3);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1.2rem 0;
+      opacity: 0;
+      animation: fadeUp 1.2s ease 1.3s forwards;
+    }
+
+    .divider-line {
+      width: 80px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, #9ab0ff, transparent);
+    }
+
+    .divider-moon {
+      font-size: 1.4rem;
+      animation: spin 20s linear infinite;
+      display: inline-block;
+    }
+
+    .subtitle {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 300;
+      font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+      color: #9ab0ff;
+      letter-spacing: 0.25em;
+      opacity: 0;
+      animation: fadeUp 1.2s ease 1.7s forwards;
+    }
+
+    .wishes {
+      margin-top: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 1.2s ease 2.2s forwards;
+    }
+
+    .wishes p {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: clamp(1rem, 2.5vw, 1.4rem);
+      color: rgba(200, 215, 255, 0.7);
+      letter-spacing: 0.1em;
+      line-height: 2;
+    }
+
+    .cursor {
+      position: fixed;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255,255,200,0.7);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 12px 4px rgba(255,255,180,0.5);
+      transition: transform 0.05s;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div class="cursor" id="cursor"></div>
+
+<div class="scene">
+  <p class="greeting">✦ Hoy es tu día especial ✦</p>
+  <h1 class="name">Miryan</h1>
+  <div class="divider">
+    <div class="divider-line"></div>
+    <span class="divider-moon">🌕</span>
+    <div class="divider-line"></div>
+  </div>
+  <p class="subtitle">Feliz Cumpleaños</p>
+  <div class="wishes">
+    <p>Que cada estrella de esta noche<br>ilumine tus sueños</p>
+    <p>y que la luna llena sea testigo<br>de lo especial que eres 🌙</p>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const cursor = document.getElementById('cursor');
+let W, H, mouseX = -999, mouseY = -999;
+const stars = [], shooters = [], sparks = [];
+
+// Two cute owls
+const owls = [
+  { x: -120, y: 0, speed: 0.7, scale: 1,   dir: 1,  vy: 0, bobOffset: 0,    wingAngle: 0, blinkTimer: 0, blinking: false },
+  { x: W+120, y: 0, speed: 0.55, scale: 0.82, dir: -1, vy: 0, bobOffset: 2.1, wingAngle: 0, blinkTimer: 0, blinking: false }
+];
+function resetOwl(o) {
+  if (o.dir === 1) { o.x = -150; o.y = H * (0.25 + Math.random() * 0.45); }
+  else             { o.x = W+150; o.y = H * (0.25 + Math.random() * 0.45); }
+  o.blinkTimer = 3000 + Math.random()*4000;
+  o.blinking = false;
+}
+owls.forEach(o => resetOwl(o));
+
+function drawOwl(ctx, x, y, scale, dir, wingAngle, blinking, ts) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(dir * scale, scale);
+
+  const s = 38; // base unit
+
+  // Shadow / glow under owl
+  const shadowG = ctx.createRadialGradient(0, s*1.1, 2, 0, s*0.6, s*1.5);
+  shadowG.addColorStop(0, 'rgba(120,100,200,0.18)');
+  shadowG.addColorStop(1, 'transparent');
+  ctx.fillStyle = shadowG;
+  ctx.beginPath(); ctx.ellipse(0, s*1.15, s*1.1, s*0.35, 0, 0, Math.PI*2); ctx.fill();
+
+  // TAIL
+  ctx.fillStyle = '#3a2e5a';
+  ctx.beginPath();
+  ctx.moveTo(-s*0.3, s*0.95);
+  ctx.quadraticCurveTo(0, s*1.35, s*0.3, s*0.95);
+  ctx.fill();
+
+  // BODY
+  const bodyGrad = ctx.createRadialGradient(-s*0.1, 0, s*0.1, 0, s*0.3, s*1.0);
+  bodyGrad.addColorStop(0, '#7b6baa');
+  bodyGrad.addColorStop(0.5, '#5a4880');
+  bodyGrad.addColorStop(1, '#3a2e5a');
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, s*0.35, s*0.72, s*0.88, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // BELLY (light patch)
+  ctx.fillStyle = 'rgba(220,210,255,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, s*0.55, s*0.38, s*0.52, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Belly feather lines
+  ctx.strokeStyle = 'rgba(180,160,230,0.25)';
+  ctx.lineWidth = 1.2;
+  for (let i = -2; i <= 2; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i*s*0.1, s*0.18);
+    ctx.quadraticCurveTo(i*s*0.14, s*0.55, i*s*0.08, s*0.9);
+    ctx.stroke();
+  }
+
+  // WINGS (animated flap)
+  const wFlap = Math.sin(wingAngle) * 0.35;
+
+  // Left wing
+  ctx.save();
+  ctx.translate(-s*0.6, s*0.25);
+  ctx.rotate(-0.3 + wFlap);
+  const wgL = ctx.createLinearGradient(-s*0.8, 0, 0, s*0.5);
+  wgL.addColorStop(0, '#4a3870');
+  wgL.addColorStop(1, '#2a1e4a');
+  ctx.fillStyle = wgL;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-s*0.5, -s*0.1, -s*0.9, s*0.3, -s*0.75, s*0.7);
+  ctx.bezierCurveTo(-s*0.4, s*0.85, -s*0.1, s*0.6, 0, s*0.4);
+  ctx.closePath();
+  ctx.fill();
+  // Wing feather details
+  ctx.strokeStyle = 'rgba(130,100,180,0.4)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-i*s*0.16, i*s*0.14);
+    ctx.lineTo(-s*0.6-i*s*0.05, s*0.4+i*s*0.07);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Right wing
+  ctx.save();
+  ctx.translate(s*0.6, s*0.25);
+  ctx.rotate(0.3 - wFlap);
+  const wgR = ctx.createLinearGradient(0, 0, s*0.8, s*0.5);
+  wgR.addColorStop(0, '#4a3870');
+  wgR.addColorStop(1, '#2a1e4a');
+  ctx.fillStyle = wgR;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(s*0.5, -s*0.1, s*0.9, s*0.3, s*0.75, s*0.7);
+  ctx.bezierCurveTo(s*0.4, s*0.85, s*0.1, s*0.6, 0, s*0.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(130,100,180,0.4)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i*s*0.16, i*s*0.14);
+    ctx.lineTo(s*0.6+i*s*0.05, s*0.4+i*s*0.07);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // HEAD
+  const headGrad = ctx.createRadialGradient(-s*0.1, -s*0.65, s*0.05, 0, -s*0.55, s*0.6);
+  headGrad.addColorStop(0, '#8a78b8');
+  headGrad.addColorStop(0.6, '#5a4880');
+  headGrad.addColorStop(1, '#3a2e5a');
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, -s*0.55, s*0.62, s*0.6, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // EAR TUFTS
+  ctx.fillStyle = '#4a3870';
+  // Left tuft
+  ctx.beginPath();
+  ctx.moveTo(-s*0.28, -s*1.0);
+  ctx.bezierCurveTo(-s*0.45, -s*1.35, -s*0.2, -s*1.45, -s*0.15, -s*1.1);
+  ctx.bezierCurveTo(-s*0.1, -s*1.0, -s*0.18, -s*0.98, -s*0.22, -s*1.0);
+  ctx.fill();
+  // Right tuft
+  ctx.beginPath();
+  ctx.moveTo(s*0.28, -s*1.0);
+  ctx.bezierCurveTo(s*0.45, -s*1.35, s*0.2, -s*1.45, s*0.15, -s*1.1);
+  ctx.bezierCurveTo(s*0.1, -s*1.0, s*0.18, -s*0.98, s*0.22, -s*1.0);
+  ctx.fill();
+
+  // FACE DISK (facial ruff)
+  ctx.fillStyle = 'rgba(200,185,240,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(0, -s*0.5, s*0.52, s*0.5, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // EYES
+  const eyeY = -s*0.58;
+  [-s*0.22, s*0.22].forEach((ex, ei) => {
+    // Eye white
+    ctx.fillStyle = '#f0eaff';
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY, s*0.19, s*0.19, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    if (!blinking) {
+      // Iris
+      ctx.fillStyle = ei === 0 ? '#d4a820' : '#e8b830';
+      ctx.beginPath();
+      ctx.ellipse(ex, eyeY, s*0.14, s*0.14, 0, 0, Math.PI*2);
+      ctx.fill();
+      // Pupil
+      ctx.fillStyle = '#1a1030';
+      ctx.beginPath();
+      ctx.ellipse(ex+s*0.03, eyeY, s*0.08, s*0.09, 0, 0, Math.PI*2);
+      ctx.fill();
+      // Eye shine
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.ellipse(ex+s*0.06, eyeY-s*0.04, s*0.04, s*0.04, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      // Blink — closed eye line
+      ctx.strokeStyle = '#3a2e5a';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(ex-s*0.16, eyeY);
+      ctx.quadraticCurveTo(ex, eyeY+s*0.07, ex+s*0.16, eyeY);
+      ctx.stroke();
+    }
+
+    // Eye ring
+    ctx.strokeStyle = 'rgba(160,130,210,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY, s*0.19, s*0.19, 0, 0, Math.PI*2);
+    ctx.stroke();
+  });
+
+  // BEAK
+  ctx.fillStyle = '#e8c060';
+  ctx.beginPath();
+  ctx.moveTo(-s*0.09, -s*0.42);
+  ctx.lineTo(s*0.09, -s*0.42);
+  ctx.lineTo(0, -s*0.28);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#c8a040';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // FEET / talons
+  ctx.strokeStyle = '#c8a040';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  [[-s*0.22, 0], [s*0.22, 0]].forEach(([fx, fy]) => {
+    ctx.beginPath();
+    ctx.moveTo(fx, s*1.05);
+    ctx.lineTo(fx-s*0.14, s*1.22);
+    ctx.moveTo(fx, s*1.05);
+    ctx.lineTo(fx, s*1.24);
+    ctx.moveTo(fx, s*1.05);
+    ctx.lineTo(fx+s*0.14, s*1.22);
+    ctx.stroke();
+  });
+
+  // Tiny sparkle around owl (magical aura)
+  for (let i = 0; i < 3; i++) {
+    const angle = (ts * 0.001 + i * 2.1) % (Math.PI*2);
+    const r2 = s * 1.05;
+    const sx2 = Math.cos(angle) * r2 * (0.8 + Math.sin(ts*0.002+i)*0.2);
+    const sy2 = Math.sin(angle) * r2 * 0.7;
+    ctx.fillStyle = `rgba(200,180,255,${0.3 + Math.sin(ts*0.003+i)*0.2})`;
+    ctx.beginPath();
+    ctx.arc(sx2, sy2-s*0.3, 2.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top  = e.clientY + 'px';
+  mouseX = e.clientX; mouseY = e.clientY;
+  for (let i = 0; i < 3; i++) {
+    sparks.push({
+      x: e.clientX + (Math.random()-0.5)*10,
+      y: e.clientY + (Math.random()-0.5)*10,
+      vx: (Math.random()-0.5)*2,
+      vy: (Math.random()-0.5)*2 - 1.5,
+      life: 1, size: Math.random()*3+1
+    });
+  }
+});
+
+for (let i = 0; i < 280; i++) {
+  stars.push({
+    x: Math.random() * 1920,
+    y: Math.random() * 1080,
+    r: Math.random() * 1.5 + 0.3,
+    alpha: Math.random() * 0.6 + 0.2,
+    speed: Math.random() * 0.008 + 0.003,
+    offset: Math.random() * Math.PI * 2
+  });
+}
+
+function spawnShooter() {
+  const fromLeft = Math.random() > 0.5;
+  shooters.push({
+    x: fromLeft ? -50 : W + 50,
+    y: Math.random() * H * 0.6,
+    vx: fromLeft ? Math.random()*8+4 : -(Math.random()*8+4),
+    vy: Math.random()*3+1,
+    trail: [], life: 1, len: Math.floor(Math.random()*40)+30
+  });
+}
+
+let lastShooter = 0;
+
+function drawMoon(t) {
+  const mx = W * 0.75, my = H * 0.22, r = Math.min(W, H) * 0.13;
+
+  // Outer glow
+  const glow = ctx.createRadialGradient(mx, my, r*0.8, mx, my, r*2.2);
+  glow.addColorStop(0, 'rgba(255,250,200,0.18)');
+  glow.addColorStop(0.5, 'rgba(220,230,255,0.07)');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(mx, my, r*2.2, 0, Math.PI*2); ctx.fill();
+
+  // Moon body
+  const moonGrad = ctx.createRadialGradient(mx-r*0.2, my-r*0.2, r*0.1, mx, my, r);
+  moonGrad.addColorStop(0, '#fffff0');
+  moonGrad.addColorStop(0.5, '#f8f0d0');
+  moonGrad.addColorStop(1, '#d4c89a');
+  ctx.fillStyle = moonGrad;
+  ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI*2); ctx.fill();
+
+  // Craters
+  const craters = [[0.3,0.2,0.08],[-.25,0.35,0.05],[0.1,-.3,0.06],[-.15,-.1,0.04],[0.4,-.15,0.035]];
+  craters.forEach(([cx,cy,cr]) => {
+    const ccx = mx+cx*r, ccy = my+cy*r;
+    ctx.fillStyle = 'rgba(180,160,110,0.25)';
+    ctx.beginPath(); ctx.arc(ccx, ccy, cr*r, 0, Math.PI*2); ctx.fill();
+  });
+}
+
+function loop(ts) {
+  requestAnimationFrame(loop);
+  ctx.clearRect(0, 0, W, H);
+
+  // Background gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#000510');
+  bg.addColorStop(0.5, '#020d22');
+  bg.addColorStop(1, '#010812');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawMoon(ts);
+
+  // Static stars with twinkle
+  stars.forEach(s => {
+    const a = s.alpha + Math.sin(ts * s.speed + s.offset) * 0.25;
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(s.x % W, s.y % H, s.r, 0, Math.PI*2);
+    ctx.fill();
+    // Tiny cross sparkle for bright stars
+    if (s.r > 1.2) {
+      ctx.globalAlpha = a * 0.5;
+      ctx.fillRect(s.x % W - s.r*2.5, s.y % H - 0.5, s.r*5, 1);
+      ctx.fillRect(s.x % W - 0.5, s.y % H - s.r*2.5, 1, s.r*5);
+    }
+  });
+  ctx.globalAlpha = 1;
+
+  // Shooting stars
+  if (ts - lastShooter > 1200 + Math.random()*1500) {
+    spawnShooter();
+    lastShooter = ts;
+  }
+
+  for (let i = shooters.length - 1; i >= 0; i--) {
+    const s = shooters[i];
+    s.trail.push({x: s.x, y: s.y});
+    if (s.trail.length > s.len) s.trail.shift();
+    s.x += s.vx; s.y += s.vy; s.vy += 0.04;
+
+    if (s.trail.length > 1) {
+      for (let j = 1; j < s.trail.length; j++) {
+        const prog = j / s.trail.length;
+        ctx.globalAlpha = prog * 0.9;
+        ctx.strokeStyle = `hsl(${200 + prog*40}, 80%, ${70+prog*20}%)`;
+        ctx.lineWidth = prog * 2.5;
+        ctx.beginPath();
+        ctx.moveTo(s.trail[j-1].x, s.trail[j-1].y);
+        ctx.lineTo(s.trail[j].x, s.trail[j].y);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Remove off-screen
+    if (s.x < -100 || s.x > W+100 || s.y > H+100) shooters.splice(i, 1);
+  }
+
+  // Draw owls
+  owls.forEach((o, idx) => {
+    o.x += o.speed * o.dir;
+    o.wingAngle += 0.08 + idx * 0.01;
+
+    // Blink logic
+    o.blinkTimer -= 16;
+    if (o.blinkTimer <= 0 && !o.blinking) {
+      o.blinking = true;
+      o.blinkTimer = 180;
+    } else if (o.blinking && o.blinkTimer <= 0) {
+      o.blinking = false;
+      o.blinkTimer = 2500 + Math.random()*3000;
+    }
+
+    const drawY = o.y + Math.sin(ts * 0.0015 + o.bobOffset) * 14;
+    drawOwl(ctx, o.x, drawY, o.scale, o.dir, o.wingAngle, o.blinking, ts);
+
+    if ((o.dir === 1 && o.x > W + 160) || (o.dir === -1 && o.x < -160)) {
+      resetOwl(o);
+    }
+  });
+
+  // Mouse sparks
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const sp = sparks[i];
+    sp.x += sp.vx; sp.y += sp.vy; sp.vy += 0.08; sp.life -= 0.035;
+    if (sp.life <= 0) { sparks.splice(i, 1); continue; }
+    ctx.globalAlpha = sp.life;
+    ctx.fillStyle = `hsl(50, 100%, 85%)`;
+    ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.size * sp.life, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+requestAnimationFrame(loop);
+
+// Touch support for mobile
+document.addEventListener('touchmove', e => {
+  const t = e.touches[0];
+  for (let i = 0; i < 4; i++) {
+    sparks.push({
+      x: t.clientX + (Math.random()-0.5)*14,
+      y: t.clientY + (Math.random()-0.5)*14,
+      vx: (Math.random()-0.5)*2.5,
+      vy: (Math.random()-0.5)*2.5 - 1.5,
+      life: 1, size: Math.random()*3+1.5
+    });
+  }
+}, {passive: true});
+</script>
+</body>
+</html>
